@@ -34,7 +34,7 @@
             <div class="hero-content">
                 <div class="hero-badge">
                     <span>🚀</span>
-                    <span id="totalRequests">267</span>
+                    <span id="totalRequests">Loading...</span>
                     <span>Total Request</span>
                 </div>
                 
@@ -64,21 +64,21 @@
                             <span class="code-window-dot"></span>
                             <span class="code-window-dot"></span>
                         </div>
-                        <div class="code-window-title">POST /api/text/gpt-5-4-nano</div>
+                        <div class="code-window-title">POST /v1/chat/completions</div>
                         <div class="code-window-actions">
                             <button class="code-copy-btn" onclick="copyHeroCode()">Copy</button>
                         </div>
                     </div>
                     <div class="code-window-body">
-                        <pre id="heroCode"><code><span class="code-keyword">const</span> response = <span class="code-keyword">await</span> <span class="code-function">fetch</span>(<span class="code-string">'https://api.fikridev.me/api/text/gpt-5-4-nano'</span>, {
+                        <pre id="heroCode"><code><span class="code-keyword">const</span> response = <span class="code-keyword">await</span> <span class="code-function">fetch</span>(<span class="code-string">'https://api.fikridev.me/v1/chat/completions'</span>, {
   <span class="code-property">method</span>: <span class="code-string">'POST'</span>,
   <span class="code-property">headers</span>: {
-    <span class="code-string">'accept'</span>: <span class="code-string">'application/json'</span>,
     <span class="code-string">'Content-Type'</span>: <span class="code-string">'application/json'</span>
   },
   <span class="code-property">body</span>: JSON.<span class="code-function">stringify</span>({
+    <span class="code-property">model</span>: <span class="code-string">'openai'</span>,
     <span class="code-property">messages</span>: [
-      { <span class="code-property">role</span>: <span class="code-string">'user'</span>, <span class="code-property">content</span>: <span class="code-string">'Hello, how are you?'</span> }
+      { <span class="code-property">role</span>: <span class="code-string">'user'</span>, <span class="code-property">content</span>: <span class="code-string">'Hello!'</span> }
     ]
   })
 });
@@ -179,18 +179,18 @@
                         </div>
                         <div class="code-panel-body">
                             <pre id="jsRequest"><code><span class="code-keyword">const</span> response = <span class="code-keyword">await</span> <span class="code-function">fetch</span>(
-  <span class="code-string">'https://api.fikridev.me/api/text/gpt-5-4-nano'</span>,
+  <span class="code-string">'https://api.fikridev.me/v1/chat/completions'</span>,
   {
     <span class="code-property">method</span>: <span class="code-string">'POST'</span>,
     <span class="code-property">headers</span>: {
-      <span class="code-string">'accept'</span>: <span class="code-string">'application/json'</span>,
       <span class="code-string">'Content-Type'</span>: <span class="code-string">'application/json'</span>
     },
     <span class="code-property">body</span>: JSON.<span class="code-function">stringify</span>({
+      <span class="code-property">model</span>: <span class="code-string">'openai'</span>,
       <span class="code-property">messages</span>: [
         {
           <span class="code-property">role</span>: <span class="code-string">'user'</span>,
-          <span class="code-property">content</span>: <span class="code-string">'Hello, how are you?'</span>
+          <span class="code-property">content</span>: <span class="code-string">'Hello!'</span>
         }
       ]
     })
@@ -236,16 +236,16 @@
                             <pre id="pythonRequest"><code><span class="code-keyword">import</span> requests
 
 response = requests.<span class="code-function">post</span>(
-    <span class="code-string">'https://api.fikridev.me/api/text/gpt-5-4-nano'</span>,
+    <span class="code-string">'https://api.fikridev.me/v1/chat/completions'</span>,
     <span class="code-property">headers</span>={
-        <span class="code-string">'accept'</span>: <span class="code-string">'application/json'</span>,
         <span class="code-string">'Content-Type'</span>: <span class="code-string">'application/json'</span>
     },
     <span class="code-property">json</span>={
+        <span class="code-string">'model'</span>: <span class="code-string">'openai'</span>,
         <span class="code-string">'messages'</span>: [
             {
                 <span class="code-string">'role'</span>: <span class="code-string">'user'</span>,
-                <span class="code-string">'content'</span>: <span class="code-string">'Hello, how are you?'</span>
+                <span class="code-string">'content'</span>: <span class="code-string">'Hello!'</span>
             }
         ]
     }
@@ -288,14 +288,14 @@ data = response.<span class="code-function">json</span>()</code></pre>
                         </div>
                         <div class="code-panel-body">
                             <pre id="curlRequest"><code>curl -X <span class="code-string">'POST'</span> \
-  <span class="code-string">'https://api.fikridev.me/api/text/gpt-5-4-nano'</span> \
-  -H <span class="code-string">'accept: application/json'</span> \
+  <span class="code-string">'https://api.fikridev.me/v1/chat/completions'</span> \
   -H <span class="code-string">'Content-Type: application/json'</span> \
   -d <span class="code-string">'{
+    "model": "openai",
     "messages": [
       {
         "role": "user",
-        "content": "Hello, how are you?"
+        "content": "Hello!"
       }
     ]
   }'</span></code></pre>
@@ -373,6 +373,55 @@ function copyHeroCode() {
     const heroBtn = document.querySelector('.hero-code .code-copy-btn');
     copyCode('heroCode', heroBtn);
 }
+
+// Fungsi untuk fetch dan update total requests secara realtime
+async function updateTotalRequests() {
+    try {
+        const response = await fetch('/api/stats/total-requests');
+        const data = await response.json();
+        
+        const totalElement = document.getElementById('totalRequests');
+        if (totalElement) {
+            // Animate counter
+            const currentValue = parseInt(totalElement.textContent) || 0;
+            const targetValue = data.total || 0;
+            
+            if (currentValue !== targetValue) {
+                animateCounter(totalElement, currentValue, targetValue, 1000);
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching total requests:', error);
+        const totalElement = document.getElementById('totalRequests');
+        if (totalElement && totalElement.textContent === 'Loading...') {
+            totalElement.textContent = '0';
+        }
+    }
+}
+
+// Fungsi untuk animasi counter
+function animateCounter(element, start, end, duration) {
+    const range = end - start;
+    const increment = range / (duration / 16); // 60fps
+    let current = start;
+    
+    const timer = setInterval(() => {
+        current += increment;
+        if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+            current = end;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(current).toLocaleString();
+    }, 16);
+}
+
+// Update total requests saat halaman dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    updateTotalRequests();
+    
+    // Update setiap 5 detik
+    setInterval(updateTotalRequests, 5000);
+});
 </script>
     <!-- CTA Section -->
     <section class="cta-section">
