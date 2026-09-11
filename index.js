@@ -43,8 +43,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
 app.use((req, res, next) => {
-  // Hanya log request ke /api/*
-  if (req.path.startsWith('/api/')) {
+  // Log request ke /api/* dan /v1/*
+  if (req.path.startsWith('/api/') || req.path.startsWith('/v1/')) {
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.socket.remoteAddress;
     const clientIp = ip.split(',')[0].trim();
     
@@ -89,9 +89,9 @@ app.use(express.static(path.join(__dirname)));
 const swaggerDocument = {
   openapi: '3.0.0',
   info: {
-    title: 'Free AI API - FikriDev',
+    title: 'ExodusAPI - Free AI API',
     version: '1.0.0',
-    description: 'REST API untuk mengakses AI models gratis untuk developer',
+    description: 'OpenAI-compatible REST API untuk mengakses AI models gratis untuk developer. Mendukung OpenAI SDK dan format compatible.',
     contact: {
       name: 'FikriDev',
       url: 'https://fikridev.me'
@@ -104,12 +104,251 @@ const swaggerDocument = {
     }
   ],
   tags: [
-    { name: 'Text', description: 'Text generation endpoints' },
-    { name: 'Image', description: 'Image generation endpoints' },
+    { name: 'OpenAI Compatible', description: 'OpenAI-compatible endpoints (v1)' },
+    { name: 'Text', description: 'Text generation endpoints (Legacy)' },
+    { name: 'Image', description: 'Image generation endpoints (Legacy)' },
     { name: 'Audio', description: 'Audio transcription endpoints' }
   ],
   components: {
     schemas: {
+      ChatCompletionRequest: {
+        type: 'object',
+        required: ['model', 'messages'],
+        properties: {
+          model: {
+            type: 'string',
+            example: 'openai',
+            description: 'Model ID to use'
+          },
+          messages: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['role', 'content'],
+              properties: {
+                role: {
+                  type: 'string',
+                  enum: ['user', 'assistant', 'system'],
+                  example: 'user'
+                },
+                content: {
+                  type: 'string',
+                  example: 'Hello!'
+                }
+              }
+            }
+          },
+          temperature: {
+            type: 'number',
+            minimum: 0,
+            maximum: 2,
+            example: 0.7
+          },
+          top_p: {
+            type: 'number',
+            minimum: 0,
+            maximum: 1,
+            example: 1
+          },
+          max_tokens: {
+            type: 'integer',
+            example: 1000
+          },
+          stream: {
+            type: 'boolean',
+            example: false
+          },
+          stop: {
+            oneOf: [
+              { type: 'string' },
+              { type: 'array', items: { type: 'string' } }
+            ]
+          }
+        }
+      },
+      ChatCompletionResponse: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            example: 'chatcmpl-exodus-123456'
+          },
+          object: {
+            type: 'string',
+            example: 'chat.completion'
+          },
+          created: {
+            type: 'integer',
+            example: 1750000000
+          },
+          model: {
+            type: 'string',
+            example: 'openai'
+          },
+          choices: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                index: {
+                  type: 'integer',
+                  example: 0
+                },
+                message: {
+                  type: 'object',
+                  properties: {
+                    role: {
+                      type: 'string',
+                      example: 'assistant'
+                    },
+                    content: {
+                      type: 'string',
+                      example: 'Hello! How can I help you today?'
+                    }
+                  }
+                },
+                finish_reason: {
+                  type: 'string',
+                  example: 'stop'
+                }
+              }
+            }
+          },
+          usage: {
+            type: 'object',
+            properties: {
+              prompt_tokens: {
+                type: 'integer',
+                example: 10
+              },
+              completion_tokens: {
+                type: 'integer',
+                example: 20
+              },
+              total_tokens: {
+                type: 'integer',
+                example: 30
+              }
+            }
+          }
+        }
+      },
+      ImageGenerationRequest: {
+        type: 'object',
+        required: ['model', 'prompt'],
+        properties: {
+          model: {
+            type: 'string',
+            example: 'flux',
+            description: 'Model ID to use for image generation'
+          },
+          prompt: {
+            type: 'string',
+            example: 'A cat in space'
+          },
+          n: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 10,
+            example: 1
+          },
+          size: {
+            type: 'string',
+            example: '1024x1024'
+          },
+          response_format: {
+            type: 'string',
+            enum: ['url', 'b64_json'],
+            example: 'url'
+          }
+        }
+      },
+      ImageGenerationResponse: {
+        type: 'object',
+        properties: {
+          created: {
+            type: 'integer',
+            example: 1750000000
+          },
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                url: {
+                  type: 'string',
+                  example: 'https://...'
+                },
+                b64_json: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }
+      },
+      ModelList: {
+        type: 'object',
+        properties: {
+          object: {
+            type: 'string',
+            example: 'list'
+          },
+          data: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/Model'
+            }
+          }
+        }
+      },
+      Model: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            example: 'openai'
+          },
+          object: {
+            type: 'string',
+            example: 'model'
+          },
+          created: {
+            type: 'integer',
+            example: 1750000000
+          },
+          owned_by: {
+            type: 'string',
+            example: 'exodusapi'
+          }
+        }
+      },
+      OpenAIError: {
+        type: 'object',
+        properties: {
+          error: {
+            type: 'object',
+            properties: {
+              message: {
+                type: 'string',
+                example: 'Model not found'
+              },
+              type: {
+                type: 'string',
+                example: 'invalid_request_error'
+              },
+              param: {
+                type: 'string',
+                example: 'model'
+              },
+              code: {
+                type: 'string',
+                example: 'model_not_found'
+              }
+            }
+          }
+        }
+      },
       MessageInput: {
         type: 'object',
         required: ['messages'],
@@ -194,14 +433,179 @@ const imageModels = [
   { name: 'GPT Image', id: 'gptimage' }
 ];
 
-// Generate Swagger paths untuk Text models
+// Helper function untuk generate unique ID
+function generateId(prefix = 'chatcmpl-exodus') {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Helper function untuk mendapatkan model by ID
+function findModelById(modelId) {
+  const textModel = textModels.find(m => m.id === modelId);
+  if (textModel) return { ...textModel, type: 'text' };
+  
+  const imageModel = imageModels.find(m => m.id === modelId);
+  if (imageModel) return { ...imageModel, type: 'image' };
+  
+  return null;
+}
+
+// Helper function untuk OpenAI error response
+function openaiError(message, type = 'invalid_request_error', param = null, code = null, statusCode = 400) {
+  return {
+    statusCode,
+    body: {
+      error: {
+        message,
+        type,
+        param,
+        code
+      }
+    }
+  };
+}
+
+// ============================================
+// OPENAI-COMPATIBLE API SWAGGER PATHS
+// ============================================
+
+// POST /v1/chat/completions
+swaggerDocument.paths['/v1/chat/completions'] = {
+  post: {
+    tags: ['OpenAI Compatible'],
+    summary: 'Chat Completions (OpenAI-compatible)',
+    description: 'Create a chat completion using OpenAI-compatible format. Works with OpenAI SDK.',
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/ChatCompletionRequest' },
+          examples: {
+            basic: {
+              summary: 'Basic chat completion',
+              value: {
+                model: 'openai',
+                messages: [
+                  { role: 'user', content: 'Hello!' }
+                ]
+              }
+            },
+            withSystem: {
+              summary: 'With system message',
+              value: {
+                model: 'openai',
+                messages: [
+                  { role: 'system', content: 'You are a helpful assistant.' },
+                  { role: 'user', content: 'Hello!' }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    responses: {
+      200: {
+        description: 'Successful completion',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ChatCompletionResponse' }
+          }
+        }
+      },
+      400: {
+        description: 'Bad Request',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/OpenAIError' }
+          }
+        }
+      },
+      404: {
+        description: 'Model Not Found',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/OpenAIError' }
+          }
+        }
+      },
+      500: {
+        description: 'Internal Server Error',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/OpenAIError' }
+          }
+        }
+      }
+    }
+  }
+};
+
+// GET /v1/models
+swaggerDocument.paths['/v1/models'] = {
+  get: {
+    tags: ['OpenAI Compatible'],
+    summary: 'List Models (OpenAI-compatible)',
+    description: 'List all available models in OpenAI-compatible format',
+    responses: {
+      200: {
+        description: 'List of models',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ModelList' }
+          }
+        }
+      }
+    }
+  }
+};
+
+// GET /v1/models/:model
+swaggerDocument.paths['/v1/models/{model}'] = {
+  get: {
+    tags: ['OpenAI Compatible'],
+    summary: 'Retrieve Model (OpenAI-compatible)',
+    description: 'Get information about a specific model',
+    parameters: [
+      {
+        name: 'model',
+        in: 'path',
+        required: true,
+        schema: {
+          type: 'string',
+          example: 'openai'
+        },
+        description: 'Model ID'
+      }
+    ],
+    responses: {
+      200: {
+        description: 'Model information',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/Model' }
+          }
+        }
+      },
+      404: {
+        description: 'Model Not Found',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/OpenAIError' }
+          }
+        }
+      }
+    }
+  }
+};
+
+// Generate Swagger paths untuk Text models (Legacy)
 textModels.forEach(model => {
   const routeName = model.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   swaggerDocument.paths[`/api/text/${routeName}`] = {
     post: {
       tags: ['Text'],
-      summary: model.name,
-      description: `Generate text using ${model.name} model (${model.id})`,
+      summary: model.name,  // Menggunakan nama asli model
+      description: `Generate text using ${model.name} model (ID: ${model.id})`,
       requestBody: {
         required: true,
         content: {
@@ -240,14 +644,14 @@ textModels.forEach(model => {
   };
 });
 
-// Generate Swagger paths untuk Image models
+// Generate Swagger paths untuk Image models (Legacy)
 imageModels.forEach(model => {
   const routeName = model.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   swaggerDocument.paths[`/api/image/${routeName}`] = {
     get: {
       tags: ['Image'],
-      summary: model.name,
-      description: `Generate image using ${model.name} model (${model.id})`,
+      summary: model.name,  // Menggunakan nama asli model
+      description: `Generate image using ${model.name} model (ID: ${model.id})`,
       parameters: [
         {
           name: 'prompt',
@@ -355,6 +759,234 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
   explorer: true
 }));
 
+// ============================================
+// OPENAI-COMPATIBLE API ROUTES
+// ============================================
+
+// GET /v1/models - List all models
+app.get('/v1/models', (req, res) => {
+  try {
+    const allModels = [
+      ...textModels.map(m => ({
+        id: m.id,
+        object: 'model',
+        created: Math.floor(Date.now() / 1000),
+        owned_by: 'exodusapi'
+      })),
+      ...imageModels.map(m => ({
+        id: m.id,
+        object: 'model',
+        created: Math.floor(Date.now() / 1000),
+        owned_by: 'exodusapi'
+      }))
+    ];
+
+    res.json({
+      object: 'list',
+      data: allModels
+    });
+  } catch (error) {
+    console.error('Error in /v1/models:', error.message);
+    const err = openaiError('Internal server error', 'api_error', null, 'internal_error', 500);
+    res.status(err.statusCode).json(err.body);
+  }
+});
+
+// GET /v1/models/:model - Get specific model
+app.get('/v1/models/:model', (req, res) => {
+  try {
+    const modelId = req.params.model;
+    const model = findModelById(modelId);
+
+    if (!model) {
+      const err = openaiError(
+        `The model '${modelId}' does not exist.`,
+        'invalid_request_error',
+        'model',
+        'model_not_found',
+        404
+      );
+      return res.status(err.statusCode).json(err.body);
+    }
+
+    res.json({
+      id: model.id,
+      object: 'model',
+      created: Math.floor(Date.now() / 1000),
+      owned_by: 'exodusapi'
+    });
+  } catch (error) {
+    console.error('Error in /v1/models/:model:', error.message);
+    const err = openaiError('Internal server error', 'api_error', null, 'internal_error', 500);
+    res.status(err.statusCode).json(err.body);
+  }
+});
+
+// POST /v1/chat/completions - OpenAI-compatible chat completions
+app.post('/v1/chat/completions', async (req, res) => {
+  try {
+    const { model: modelId, messages, temperature, top_p, max_tokens, stream, stop } = req.body;
+
+    // Validasi model
+    if (!modelId) {
+      const err = openaiError(
+        'Missing required parameter: model',
+        'invalid_request_error',
+        'model',
+        'missing_parameter',
+        400
+      );
+      return res.status(err.statusCode).json(err.body);
+    }
+
+    // Validasi messages
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      const err = openaiError(
+        'Missing or invalid required parameter: messages',
+        'invalid_request_error',
+        'messages',
+        'invalid_parameter',
+        400
+      );
+      return res.status(err.statusCode).json(err.body);
+    }
+
+    // Cek apakah model ada
+    const model = findModelById(modelId);
+    if (!model) {
+      const err = openaiError(
+        `The model '${modelId}' does not exist.`,
+        'invalid_request_error',
+        'model',
+        'model_not_found',
+        404
+      );
+      return res.status(err.statusCode).json(err.body);
+    }
+
+    // Validasi bahwa model adalah text model
+    if (model.type !== 'text') {
+      const err = openaiError(
+        `The model '${modelId}' is not a text model.`,
+        'invalid_request_error',
+        'model',
+        'invalid_model_type',
+        400
+      );
+      return res.status(err.statusCode).json(err.body);
+    }
+
+    // Handle streaming jika diminta
+    if (stream === true) {
+      // Set headers untuk SSE
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      try {
+        // Request ke provider
+        const content = await requestToPollinations(model.id, messages);
+        
+        const completionId = generateId('chatcmpl-exodus');
+        const created = Math.floor(Date.now() / 1000);
+
+        // Kirim chunks
+        const words = content.split(' ');
+        for (let i = 0; i < words.length; i++) {
+          const chunk = {
+            id: completionId,
+            object: 'chat.completion.chunk',
+            created: created,
+            model: model.id,
+            choices: [{
+              index: 0,
+              delta: i === 0 ? { role: 'assistant', content: words[i] + ' ' } : { content: words[i] + ' ' },
+              finish_reason: null
+            }]
+          };
+          res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        }
+
+        // Final chunk
+        const finalChunk = {
+          id: completionId,
+          object: 'chat.completion.chunk',
+          created: created,
+          model: model.id,
+          choices: [{
+            index: 0,
+            delta: {},
+            finish_reason: 'stop'
+          }]
+        };
+        res.write(`data: ${JSON.stringify(finalChunk)}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+
+      } catch (error) {
+        console.error('Error in streaming:', error.message);
+        const errorChunk = {
+          error: {
+            message: error.message,
+            type: 'api_error',
+            code: 'internal_error'
+          }
+        };
+        res.write(`data: ${JSON.stringify(errorChunk)}\n\n`);
+        res.end();
+      }
+      return;
+    }
+
+    // Non-streaming response
+    const content = await requestToPollinations(model.id, messages);
+
+    const response = {
+      id: generateId('chatcmpl-exodus'),
+      object: 'chat.completion',
+      created: Math.floor(Date.now() / 1000),
+      model: model.id,
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: 'assistant',
+            content: content
+          },
+          finish_reason: 'stop'
+        }
+      ],
+      usage: {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0
+      }
+    };
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('Error in /v1/chat/completions:', error.message);
+    
+    // Log error
+    const errorLog = `[${new Date().toISOString()}] /v1/chat/completions - ${error.stack || error.message}\n`;
+    fs.appendFile('error.txt', errorLog, () => {});
+
+    const err = openaiError(
+      error.message || 'Internal server error',
+      'api_error',
+      null,
+      'internal_error',
+      500
+    );
+    res.status(err.statusCode).json(err.body);
+  }
+});
+
+// ============================================
+// LEGACY API ROUTES
+// ============================================
+
 // Handler untuk request ke Pollinations dengan fallback
 async function requestToPollinations(modelId, messages, retryCount = 0) {
   try {
@@ -428,7 +1060,7 @@ textModels.forEach(model => {
   });
 });
 
-// Generate routes untuk Image models
+// Generate routes untuk Image models (Legacy)
 imageModels.forEach(model => {
   const routeName = model.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -443,33 +1075,22 @@ imageModels.forEach(model => {
       }
 
       const encodedPrompt = encodeURIComponent(prompt);
+      const imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model.id}`;
 
-      const response = await fetch(
-        `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`
-          }
+      const response = await axios.get(imageUrl, {
+        responseType: 'arraybuffer',
+        timeout: 60000,
+        headers: {
+          'User-Agent': 'ExodusAPI/1.0'
         }
-      );
+      });
 
-      if (!response.ok) {
-        throw new Error(
-          `Pollinations API error: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const blob = await response.blob();
-
-      const arrayBuffer = await blob.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      const contentType = response.headers.get('content-type') || 'image/png';
+      const contentType = response.headers['content-type'] || 'image/png';
 
       res.setHeader('Content-Type', contentType);
       res.setHeader('X-Creator', 'FikriDev');
 
-      res.send(buffer);
+      res.send(response.data);
 
     } catch (error) {
       console.error(`Error in ${routeName}:`, error.message);
@@ -582,11 +1203,16 @@ app.get('/', (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`╔═══════════════════════════════════════════════════╗`);
-  console.log(`║   Server berhasil berjalan!                       ║`);
+  console.log(`║        ExodusAPI - OpenAI Compatible              ║`);
   console.log(`╠═══════════════════════════════════════════════════╣`);
-  console.log(`║   URL: https://exodusapi.jadikelas.tech                        ║`);
-  console.log(`║   Swagger UI: https://exodusapi.jadikelas.tech/api-docs        ║`);
+  console.log(`║   Base URL: https://api.fikridev.me               ║`);
+  console.log(`║   Swagger: https://api.fikridev.me/api-docs       ║`);
   console.log(`║   Creator: FikriDev                               ║`);
+  console.log(`╠═══════════════════════════════════════════════════╣`);
+  console.log(`║   OpenAI-Compatible Endpoints:                    ║`);
+  console.log(`║   • POST /v1/chat/completions                     ║`);
+  console.log(`║   • GET  /v1/models                               ║`);
+  console.log(`║   • GET  /v1/models/:model                        ║`);
   console.log(`╠═══════════════════════════════════════════════════╣`);
   console.log(`║   API Keys loaded: ${API_KEYS.length}                            ║`);
   console.log(`║   Text Models: ${textModels.length}                              ║`);
