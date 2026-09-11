@@ -43,8 +43,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
 app.use((req, res, next) => {
-  // Log request ke /api/* dan /v1/*
-  if (req.path.startsWith('/api/') || req.path.startsWith('/v1/')) {
+  // Log request ke /api/* dan /v1/* kecuali endpoint stats
+  const shouldLog = (req.path.startsWith('/api/') || req.path.startsWith('/v1/')) 
+                    && !req.path.startsWith('/api/stats/');
+  
+  if (shouldLog) {
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.socket.remoteAddress;
     const clientIp = ip.split(',')[0].trim();
     
@@ -1198,6 +1201,28 @@ app.post('/api/audio/transcribe', async (req, res) => {
 // Route untuk serving index.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// API endpoint untuk mendapatkan total request count
+app.get('/api/stats/total-requests', (req, res) => {
+  try {
+    const logFile = path.join(__dirname, 'request_log.txt');
+    
+    // Cek apakah file ada
+    if (!fs.existsSync(logFile)) {
+      return res.json({ total: 0 });
+    }
+
+    // Baca file dan hitung jumlah baris
+    const fileContent = fs.readFileSync(logFile, 'utf-8');
+    const lines = fileContent.split('\n').filter(line => line.trim() !== '');
+    const totalRequests = lines.length;
+
+    res.json({ total: totalRequests });
+  } catch (error) {
+    console.error('Error reading request log:', error);
+    res.json({ total: 0 });
+  }
 });
 
 // Start server
